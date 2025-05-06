@@ -264,7 +264,7 @@ class Trainer:
             del batch['idx']
             with torch.no_grad():
                 y = self.accelerator.unwrap_model(self.model).predict_class(batch, top_k=topk, device=device)
-                output = self.accelerator.unwrap_model(self.model).forward(batch.to(device))
+                output = self.accelerator.unwrap_model(self.model).forward(batch, device=device)
                 logits = output.logits
                 softmax_probs = output.probabilities
                 print("logits.shape: ", logits.shape)
