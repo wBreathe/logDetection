@@ -10,7 +10,8 @@ def arg_parser():
     parser = ArgumentParser()
 
     parser.add_argument("--config_file", default="config/loganomaly.yaml", help="config file name")
-    parser.add_argument("--mixed_enable", default=False, help="mixed setting")
+    parser.add_argument("--mixed_enable", action="store_true", default=False, help="Enable mixed setting")
+
     # input parameters
     parser.add_argument("--model_name", help="which model to use", default="LogAnomaly",
                         choices=["DeepLog", "LogAnomaly", "LogRobust", "NeuralLog", "CNN", "PLELog", "LogBERT"])
