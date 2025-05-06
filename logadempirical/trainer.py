@@ -249,10 +249,8 @@ class Trainer:
 
     def predict_unsupervised_helper(self, test_loader, y_true, topk: int, device: str = 'cpu', mixed_enable=False,
                                     num_sessions: Optional[List[int]] = None) -> Tuple[float, float, float, float]:
-        normal_class_0_probs = []
-        normal_class_1_probs = []
-        anomaly_class_0_probs = []
-        anomaly_class_1_probs = []
+        normal_class_probs = []
+        anomaly_class_probs = []
         y_pred = {k: 0 for k in y_true.keys()}
         progress_bar = tqdm(total=len(test_loader), desc=f"Predict",
                             disable=not self.accelerator.is_local_main_process)
@@ -272,17 +270,15 @@ class Trainer:
             y = self.accelerator.gather(y).cpu().numpy().tolist()
             for idx, y_i, prob_i, label_i, s_label in zip(idxs, y, softmax_probs, batch_label, support_label): # what is support label?
                 y_pred[idx] = y_pred[idx] | (label_i not in y_i or s_label)
-                print("y_pred: ", y_pred[idx], "label_i: ", label_i, "y_i: ", y_i)
+                print("y_true: ", y_true[idx], "y_pred: ", y_pred[idx], "label_i: ", label_i, "y_i: ", y_i)
                 if(idx==5): print("support label: ", support_label)
-                normal_class_prob = prob_i[0]
-                anomaly_class_prob = prob_i[1]
 
-                if label_i == 0:
-                    normal_class_0_probs.append(normal_class_prob)
-                    normal_class_1_probs.append(anomaly_class_prob)
+                confidence = prob_i[label_i - 1].item()
+
+                if y_true[idx] == 0:
+                    normal_class_probs.append(confidence)
                 else:
-                    anomaly_class_0_probs.append(normal_class_prob)
-                    anomaly_class_1_probs.append(anomaly_class_prob)
+                    anomaly_class_probs.append(confidence)
                 
             progress_bar.update(1)
         progress_bar.close()
@@ -305,10 +301,8 @@ class Trainer:
         rec = recall_score(y_true, y_pred)
         progress_bar.close()
         prob_dict = {
-            "normal_class_0_probs": normal_class_0_probs,
-            "normal_class_1_probs": normal_class_1_probs,
-            "anomaly_class_0_probs": anomaly_class_0_probs,
-            "anomaly_class_1_probs": anomaly_class_1_probs
+            "normal_class_probs": normal_class_probs,
+            "anomaly_class_probs": anomaly_class_probs
         }
 
         with open(f"softmax_probabilities_mixed-{mixed_enable}.pkl", "wb") as f:
