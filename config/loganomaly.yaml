@@ -33,7 +33,7 @@ weight_decay: 0.0
 # training configuration
 accumulation_step: 2
 batch_size: 512
-max_epoch: 20
+max_epoch: 2
 
 # common configuration
 output_dir: ./output/

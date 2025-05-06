@@ -231,7 +231,7 @@ def train_and_eval(args: argparse.Namespace,
     logger.info(f"Valid dataset: {len(valid_dataset)}")
     optimizer = get_optimizer(args, model.parameters())
 
-    device = accelerator.device
+    device = torch.device("cuda")
     model = model.to(device)
 
     logger.info(f"Start training {args.model_name} model on {device} device")
