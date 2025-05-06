@@ -5,7 +5,7 @@ from collections import Counter
 import numpy as np
 from tqdm import tqdm
 import os
-
+import pickle
 from transformers import get_scheduler
 import torch
 from torch.utils.data import DataLoader, WeightedRandomSampler
@@ -200,7 +200,7 @@ class Trainer:
                              dataset,
                              y_true, topk: int,
                              device: str = 'cpu',
-                             is_valid: bool = False,
+                             is_valid: bool = False, mixed_enable=False,
                              num_sessions: Optional[List[int]] = None
                              ) -> Union[Tuple[float, float, float, float], Tuple[float, int]]:
         def find_topk(dataloader):
@@ -220,11 +220,11 @@ class Trainer:
         self.model, test_loader = self.accelerator.prepare(self.model, test_loader)
         self.model.eval()
         if is_valid:
-            acc, _, _, _ = self.predict_unsupervised_helper(test_loader, y_true, topk, device)
+            acc, _, _, _ = self.predict_unsupervised_helper(test_loader, y_true, topk, device, mixed_enable=mixed_enable)
             self.logger.info(find_topk(test_loader))
             return acc, find_topk(test_loader)
         else:
-            return self.predict_unsupervised_helper(test_loader, y_true, topk, device, num_sessions)
+            return self.predict_unsupervised_helper(test_loader, y_true, topk, device, mixed_enable, num_sessions)
 
     def predict_logbert(self, valid_data_normal, valid_data_abnormal, device: str = "cpu"):
         self.model.eval()
@@ -247,8 +247,12 @@ class Trainer:
             batch_abnormal += 1
         return loss_normal / batch_normal, loss_abnormal / batch_abnormal
 
-    def predict_unsupervised_helper(self, test_loader, y_true, topk: int, device: str = 'cpu',
+    def predict_unsupervised_helper(self, test_loader, y_true, topk: int, device: str = 'cpu', mixed_enable=False,
                                     num_sessions: Optional[List[int]] = None) -> Tuple[float, float, float, float]:
+        normal_class_0_probs = []
+        normal_class_1_probs = []
+        anomaly_class_0_probs = []
+        anomaly_class_1_probs = []
         y_pred = {k: 0 for k in y_true.keys()}
         progress_bar = tqdm(total=len(test_loader), desc=f"Predict",
                             disable=not self.accelerator.is_local_main_process)
@@ -260,15 +264,32 @@ class Trainer:
             del batch['idx']
             with torch.no_grad():
                 y = self.accelerator.unwrap_model(self.model).predict_class(batch, top_k=topk, device=device)
+                output = self.accelerator.unwrap_model(self.model).forward(batch)
+                logits = output.logits
+                softmax_probs = output.probabilities
+                print("logits.shape: ", logits.shape)
+                print("shape after softmax: ", softmax_probs.shape)
             y = self.accelerator.gather(y).cpu().numpy().tolist()
-            for idx, y_i, label_i, s_label in zip(idxs, y, batch_label, support_label):
+            for idx, y_i, prob_i, label_i, s_label in zip(idxs, y, softmax_probs, batch_label, support_label): # what is support label?
                 y_pred[idx] = y_pred[idx] | (label_i not in y_i or s_label)
+                if(idx==5): print("support label: ", support_label)
+                normal_class_prob = prob_i[0]
+                anomaly_class_prob = prob_i[1]
+
+                if label_i == 0:
+                    normal_class_0_probs.append(normal_class_prob)
+                    normal_class_1_probs.append(anomaly_class_prob)
+                else:
+                    anomaly_class_0_probs.append(normal_class_prob)
+                    anomaly_class_1_probs.append(anomaly_class_prob)
+                
             progress_bar.update(1)
         progress_bar.close()
         idxs = list(y_pred.keys())
         self.logger.info(f"Computing metrics...")
         if num_sessions is not None:
             self.logger.info(f"Total sessions: {sum(num_sessions)}")
+            
             y_pred = [[y_pred[idx]] * num_sessions[idx] for idx in idxs]
             y_true = [[y_true[idx]] * num_sessions[idx] for idx in idxs]
             y_pred = np.array(list(chain.from_iterable(y_pred)))
@@ -282,6 +303,15 @@ class Trainer:
         pre = precision_score(y_true, y_pred)
         rec = recall_score(y_true, y_pred)
         progress_bar.close()
+        prob_dict = {
+            "normal_class_0_probs": normal_class_0_probs,
+            "normal_class_1_probs": normal_class_1_probs,
+            "anomaly_class_0_probs": anomaly_class_0_probs,
+            "anomaly_class_1_probs": anomaly_class_1_probs
+        }
+
+        with open(f"softmax_probabilities_mixed-{mixed_enable}.pkl", "wb") as f:
+            pickle.dump(prob_dict, f)
         return acc, f1, pre, rec
 
     def save_model(self, save_dir: str, model_name: str):

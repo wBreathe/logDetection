@@ -5,7 +5,7 @@ from typing import List, Tuple, Optional, Any
 import numpy as np
 
 
-def load_features(data_path, is_unsupervised=True, min_len=0, is_train=True):
+def load_features(data_path, is_unsupervised=True, min_len=0, is_train=True, mixed_enable=False):
     """
     Load features from pickle file
     Parameters
@@ -36,6 +36,8 @@ def load_features(data_path, is_unsupervised=True, min_len=0, is_train=True):
                     logs.append((seq['EventTemplate'], label))
                 else:
                     no_abnormal += 1 # 改
+                    if(mixed_enable):
+                        logs.append((seq['EventTemplate'], 0))
             print("Number of abnormal sessions:", no_abnormal)
         else:
             logs = []

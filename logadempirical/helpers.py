@@ -9,10 +9,10 @@ def arg_parser():
     """
     parser = ArgumentParser()
 
-    parser.add_argument("--config_file", default="config/deeplog1.yaml", help="config file name")
-
+    parser.add_argument("--config_file", default="config/loganomaly.yaml", help="config file name")
+    parser.add_argument("--mixed_enable", default=False, help="mixed setting")
     # input parameters
-    parser.add_argument("--model_name", help="which model to use", default="DeepLog",
+    parser.add_argument("--model_name", help="which model to use", default="LogAnomaly",
                         choices=["DeepLog", "LogAnomaly", "LogRobust", "NeuralLog", "CNN", "PLELog", "LogBERT"])
     parser.add_argument("--dataset_name", help="which dataset to use", default="HDFS",
                         choices=["HDFS", "BGL", "Thunderbird", "Spirit", "Hadoop"])
@@ -32,7 +32,7 @@ def arg_parser():
                         help="to use log entries or log minutes for session level window")
     parser.add_argument('--window_size', default=5, type=int, help='window size (entries or minutes)')
     parser.add_argument('--step_size', default=1, type=int, help='step size (entries or minutes)')
-    parser.add_argument('--train_size', default=0.4, type=float, help="train size")
+    parser.add_argument('--train_size', default=0.6, type=float, help="train size")
     parser.add_argument("--valid_ratio", default=0.1, type=float, help="valid size")
 
     # model parameters
@@ -69,7 +69,7 @@ def arg_parser():
     parser.add_argument("--hidden_size", default=128, type=int, help="hidden size in lstm")
     parser.add_argument("--num_layers", default=2, type=int, help="num of lstm layers")
     parser.add_argument("--embedding_dim", default=50, type=int, help="embedding dimension of logkeys")
-    parser.add_argument("--topk", default=9, type=int, help="top g candidates are normal")
+    parser.add_argument("--topk", default=5, type=int, help="top g candidates are normal")
 
     # neural_log
     parser.add_argument("--num_encoder_layers", default=1, type=int, help="number of encoder layers")

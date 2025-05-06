@@ -39,6 +39,7 @@ def build_vocab(vocab_path: str,
                 embeddings: str,
                 embedding_dim: int = 300,
                 is_unsupervised: bool = False,
+                mixed_enable: bool=False,
                 logger: Logger = getLogger("__name__")) -> Vocab:
     """
     Build vocab from training data
@@ -61,6 +62,8 @@ def build_vocab(vocab_path: str,
             data = pickle.load(f)
         if is_unsupervised:
             logs = [x['EventTemplate'] for x in data if np.max(x['Label']) == 0] #改
+            if(mixed_enable):
+                logs = [x['EventTemplate'] for x in data]
         else:
             logs = [x['EventTemplate'] for x in data]
         vocab = Vocab(logs, os.path.join(data_dir, embeddings), embedding_dim=embedding_dim)
@@ -157,6 +160,7 @@ def train_and_eval(args: argparse.Namespace,
                    vocab: Vocab,
                    model: torch.nn.Module,
                    is_unsupervised=False,
+                   mixed_enable=False,
                    logger: Logger = getLogger("__name__")) -> Tuple[float, float, float, float]:
     """
     Run model
@@ -177,7 +181,7 @@ def train_and_eval(args: argparse.Namespace,
     print("Loading train dataset\n")
     data, stat = load_features(train_path,
                                is_unsupervised=is_unsupervised,
-                               is_train=True)
+                               is_train=True, mixed_enable=mixed_enable)
     logger.info(f"Train data statistics: {stat}")
     data = shuffle(data)
     n_valid = int(len(data) * args.valid_ratio)
@@ -280,7 +284,7 @@ def train_and_eval(args: argparse.Namespace,
         logger.info(f"Validation Result:: Acc: {acc:.4f}, Precision: {pre:.4f}, Recall: {rec:.4f}, F1: {f1:.4f}")
     print("Loading test dataset\n")
     data, stat = load_features(test_path,
-                               is_unsupervised=is_unsupervised,
+                               is_unsupervised=is_unsupervised, mixed_enable=False,
                                is_train=False)
     logger.info(f"Test data statistics: {stat}")
     label_dict = {}
@@ -333,6 +337,7 @@ def train_and_eval(args: argparse.Namespace,
                                                          topk=args.topk,
                                                          device=device,
                                                          is_valid=False,
+                                                         mixed_enable=mixed_enable,
                                                          num_sessions=num_sessions)
     else:
         acc, f1, pre, rec = trainer.predict_supervised(test_dataset,
@@ -364,12 +369,14 @@ def run(args):
     os.makedirs(f"{args.output_dir}/vocabs", exist_ok=True)
     vocab_path = f"{args.output_dir}/vocabs/{args.model_name}.pkl"
     is_unsupervised = args.model_name in ["LogAnomaly", "DeepLog", "LogBERT"]
+    mixed_enable = args.mixed_enable
     log_vocab = build_vocab(vocab_path,
                             args.data_dir,
                             train_path,
                             args.embeddings,
                             embedding_dim=args.embedding_dim,
                             is_unsupervised=is_unsupervised,
+                            mixed_enable=mixed_enable,
                             logger=logger)
     model = build_model(args, vocab_size=len(log_vocab))
     train_and_eval(args,
@@ -378,6 +385,7 @@ def run(args):
                    log_vocab,
                    model,
                    is_unsupervised=is_unsupervised,
+                   mixed_enable=mixed_enable,
                    logger=logger)
 
 
