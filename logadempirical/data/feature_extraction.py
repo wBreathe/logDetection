@@ -23,23 +23,24 @@ def load_features(data_path, is_unsupervised=True, min_len=0, is_train=True, mix
         data = pickle.load(f)
     if is_train:
         if is_unsupervised:
-            logs = []
-            no_abnormal = 0
-            for seq in data:
-                if len(seq['EventTemplate']) < min_len:
-                    continue
-                if not isinstance(seq['Label'], int):
-                    label = max(seq['Label'])
-                else:
-                    label = seq['Label']
-                if label == 0:
-                    logs.append((seq['EventTemplate'], label))
-                else:
-                    no_abnormal += 1 # 改
-                    if(mixed_enable):
-                        print("label: ", label )
-                        # logs.append((seq['EventTemplate'], 0))
-            print("Number of abnormal sessions:", no_abnormal)
+            if mixed_enable:
+                logs = [(seq['EventTemplate'], 0) for seq in data if len(seq['EventTemplate']) >= min_len] 
+            else:
+                logs = []
+                no_abnormal = 0
+                for seq in data:
+                    if len(seq['EventTemplate']) < min_len:
+                        continue
+                    if not isinstance(seq['Label'], int):
+                        label = max(seq['Label'])
+                    else:
+                        label = seq['Label']
+                    if label == 0:
+                        logs.append((seq['EventTemplate'], label))
+                    else:
+                        no_abnormal += 1 # 改
+
+                print("Number of abnormal sessions:", no_abnormal)
         else:
             logs = []
             no_abnormal = 0
