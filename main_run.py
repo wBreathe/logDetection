@@ -60,7 +60,7 @@ def build_vocab(vocab_path: str,
         with open(train_path, 'rb') as f:
             data = pickle.load(f)
         if is_unsupervised:
-            logs = [x['EventTemplate'] for x in data if np.max(x['Label']) == 0]
+            logs = [x['EventTemplate'] for x in data if np.max(x['Label']) == 0] #改
         else:
             logs = [x['EventTemplate'] for x in data]
         vocab = Vocab(logs, os.path.join(data_dir, embeddings), embedding_dim=embedding_dim)

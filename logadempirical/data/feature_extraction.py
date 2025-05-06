@@ -35,7 +35,7 @@ def load_features(data_path, is_unsupervised=True, min_len=0, is_train=True):
                 if label == 0:
                     logs.append((seq['EventTemplate'], label))
                 else:
-                    no_abnormal += 1
+                    no_abnormal += 1 # 改
             print("Number of abnormal sessions:", no_abnormal)
         else:
             logs = []

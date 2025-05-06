@@ -15,7 +15,7 @@ from sklearn.metrics import f1_score, precision_score, recall_score, accuracy_sc
 from itertools import chain
 
 
-class Trainer:
+class Trainer:  
     def __init__(self, model,
                  train_dataset,
                  valid_dataset,
