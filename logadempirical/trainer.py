@@ -270,15 +270,17 @@ class Trainer:
             y = self.accelerator.gather(y).cpu().numpy().tolist()
             for idx, y_i, prob_i, label_i, s_label in zip(idxs, y, softmax_probs, batch_label, support_label): # what is support label?
                 y_pred[idx] = y_pred[idx] | (label_i not in y_i or s_label)
-                print("y_true: ", y_true[idx], "y_pred: ", y_pred[idx], "label_i: ", label_i, "y_i: ", y_i)
                 if(idx==5): print("support label: ", support_label)
 
                 confidence = prob_i[label_i - 1].item()
-
-                if y_true[idx] == 0:
-                    normal_class_probs.append(confidence)
+                if(label_i == y_i[0]):
+                    if y_true[idx] == 0:
+                        normal_class_probs.append(confidence)
+                    else:
+                        anomaly_class_probs.append(confidence)
                 else:
-                    anomaly_class_probs.append(confidence)
+                    max = prob_i[y_i[0] - 1].item()
+                    print("y_true: ", y_true[idx], "y_pred: ", y_pred[idx], "prob_label: ", confidence, "label_i: ",  label_i, "predicted: ", max, "y_i: ", y_i)
                 
             progress_bar.update(1)
         progress_bar.close()
