@@ -265,13 +265,14 @@ class Trainer:
             with torch.no_grad():
                 y = self.accelerator.unwrap_model(self.model).predict_class(batch, top_k=topk, device=device)
                 output = self.accelerator.unwrap_model(self.model).forward(batch, device=device)
-                logits = output.logits
+                #logits = output.logits
                 softmax_probs = output.probabilities
-                print("logits.shape: ", logits.shape)
-                print("shape after softmax: ", softmax_probs.shape)
+                # print("logits.shape: ", logits.shape)
+                # print("shape after softmax: ", softmax_probs.shape)
             y = self.accelerator.gather(y).cpu().numpy().tolist()
             for idx, y_i, prob_i, label_i, s_label in zip(idxs, y, softmax_probs, batch_label, support_label): # what is support label?
                 y_pred[idx] = y_pred[idx] | (label_i not in y_i or s_label)
+                print("y_pred: ", y_pred[idx], "label_i: ", label_i, "y_i: ", y_i)
                 if(idx==5): print("support label: ", support_label)
                 normal_class_prob = prob_i[0]
                 anomaly_class_prob = prob_i[1]
@@ -312,6 +313,7 @@ class Trainer:
 
         with open(f"softmax_probabilities_mixed-{mixed_enable}.pkl", "wb") as f:
             pickle.dump(prob_dict, f)
+        print(f"acc:{acc}, f1:{f1}, pre:{pre}, rec:{rec}")
         return acc, f1, pre, rec
 
     def save_model(self, save_dir: str, model_name: str):

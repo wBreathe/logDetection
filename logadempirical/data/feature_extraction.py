@@ -37,6 +37,7 @@ def load_features(data_path, is_unsupervised=True, min_len=0, is_train=True, mix
                 else:
                     no_abnormal += 1 # 改
                     if(mixed_enable):
+                        print("label: ", label )
                         logs.append((seq['EventTemplate'], 0))
             print("Number of abnormal sessions:", no_abnormal)
         else:
